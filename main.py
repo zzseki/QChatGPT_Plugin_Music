@@ -2,7 +2,8 @@ from pkg.plugin.context import register, handler, BasePlugin, APIHost, EventCont
 from pkg.plugin.events import (
     NormalMessageResponded,
     PersonMessageReceived,
-    GroupMessageReceived,
+    GroupMessageReceived,GroupNormalMessageReceived,PersonNormalMessageReceived
+
 )
 from mirai import Voice
 import os
@@ -21,7 +22,7 @@ import shutil
 class GetMusic(BasePlugin):
     # 插件加载时触发
     def __init__(self, host: APIHost):
-        self.token = "Zgv6hD2FyDYrPGGF"  # 请将这里的'YOUR_TOKEN'替换为你实际获取的token
+        self.token = "YOUR_TOKEN"  # 请将这里的'YOUR_TOKEN'替换为你实际获取的token
         self.logger = logging.getLogger(__name__)
         self.matches = None
 
@@ -58,21 +59,16 @@ class GetMusic(BasePlugin):
             if await self.download_audio(url, save_path):
                 silk_file = self.convert_to_silk(save_path)
                 if silk_file:
-
                     self.silk_file = silk_file
-
                     return
-
-
 
     @handler(NormalMessageResponded)
     async def normal_message_responded(self, ctx: EventContext, **kwargs):
         if self.matches and hasattr(self, 'silk_file'):
             ctx.add_return("reply", [Voice(path=str(self.silk_file))])
+            await ctx.event.query.adapter.reply_message(ctx.event.query.message_event, "为你播放音乐：" + self.matches.group(1))
             self.matches = None
-            wav_save_path = os.path.join(os.path.dirname(__file__), "temp", "temp.wav")
-            silk_save_path = os.path.join(os.path.dirname(__file__), "temp", "temp.silk")
-            time.sleep(1)
+
 
         else:
             self.logger.error("未找到合适的 SILK 文件路径")
