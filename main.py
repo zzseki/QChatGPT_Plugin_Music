@@ -23,6 +23,7 @@ class GetMusic(BasePlugin):
     # 插件加载时触发
     def __init__(self, host: APIHost):
         self.token = "YOUR_TOKEN"  # 请将这里的'YOUR_TOKEN'替换为你实际获取的token
+        self.cookie = "YOUR_COOKIE"  # 请将这里的'YOUR_COOKIE'替换为你实际获取的cookie
         self.logger = logging.getLogger(__name__)
         self.matches = None
 
@@ -107,6 +108,7 @@ class GetMusic(BasePlugin):
             "id": keyword,
             "format": "json",
             "token": self.token,
+            'cookie':self.cookie,
         }
 
         async with httpx.AsyncClient() as client:
