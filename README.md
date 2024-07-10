@@ -19,7 +19,12 @@
 self.token = 'YOURTOKEN'  # 请将这里的'YOUR_TOKEN'替换为你实际获取的token
 ```
 
+另外main.py中的self.cookie为你网易云音乐的cookie，如果没有请将其设为空，若设为空一些vip歌曲可能只能获取30秒
+
+只能获取网易云音乐上有的音乐
+
 ## 配置GPT
 
-向QChatGpt发送：播放歌曲：XXX  即可
+向QChatGpt发送：播放歌曲：XXX(歌名)(空格)XXX(歌手)
+也可以不限制歌手
 
