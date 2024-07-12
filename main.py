@@ -1,10 +1,5 @@
 from pkg.plugin.context import register, handler, BasePlugin, APIHost, EventContext
-from pkg.plugin.events import (
-    NormalMessageResponded,
-    PersonMessageReceived,
-    GroupMessageReceived,GroupNormalMessageReceived,PersonNormalMessageReceived
-
-)
+from pkg.plugin.events import * # 导入事件类
 from mirai import Voice
 import os
 import requests
@@ -22,10 +17,12 @@ import shutil
 class GetMusic(BasePlugin):
     # 插件加载时触发
     def __init__(self, host: APIHost):
-        self.token = "YOUR_TOKEN"  # 请将这里的'YOUR_TOKEN'替换为你实际获取的token
+        self.token = "YOUR_COOKIE"  # 请将这里的'YOUR_TOKEN'替换为你实际获取的token
         self.cookie = "YOUR_COOKIE"  # 请将这里的'YOUR_COOKIE'替换为你实际获取的cookie
         self.logger = logging.getLogger(__name__)
         self.matches = None
+        self.msg = None
+        self.url = None
 
     @handler(PersonMessageReceived)
     async def person_message_received(self, ctx: EventContext, **kwargs):
@@ -36,15 +33,18 @@ class GetMusic(BasePlugin):
             self.matches = match
             music_name = match.group(1)
             id = await self.get_musicid(music_name)
-            url = await self.get_music(id)
-            save_path = os.path.join(os.path.dirname(__file__), "temp", "temp.wav")
-            if await self.download_audio(url, save_path):
-                silk_file = self.convert_to_silk(save_path)
-                if silk_file:
-                    # 可以将结果存储在实例属性中，以便在后续的事件处理器中使用
-                    self.silk_file = silk_file  # 假设是实例属性
-                    # 如果需要在这里做一些回复或记录，可以在这里完成
-                    return  # 这里不需要返回任何东西，事件处理器不应该返回值
+            msg,url = await self.get_music(id)
+            self.msg = msg
+            self.url = url
+            if url:
+                save_path = os.path.join(os.path.dirname(__file__), "temp", "temp.wav")
+                if await self.download_audio(url, save_path):
+                    silk_file = self.convert_to_silk(save_path)
+                    if silk_file:
+                        # 可以将结果存储在实例属性中，以便在后续的事件处理器中使用
+                        self.silk_file = silk_file  # 假设是实例属性
+                        # 如果需要在这里做一些回复或记录，可以在这里完成
+                        return  # 这里不需要返回任何东西，事件处理器不应该返回值
 
     @handler(GroupMessageReceived)
     async def group_message_received(self, ctx: EventContext, **kwargs):
@@ -55,25 +55,30 @@ class GetMusic(BasePlugin):
             self.matches = match
             music_name = match.group(1)
             id = await self.get_musicid(music_name)
-            url = await self.get_music(id)
-            save_path = os.path.join(os.path.dirname(__file__), "temp", "temp.wav")
-            if await self.download_audio(url, save_path):
-                silk_file = self.convert_to_silk(save_path)
-                if silk_file:
-                    self.silk_file = silk_file
-                    return
+            msg,url = await self.get_music(id)
+            self.msg = msg
+            self.url = url
+
+            if url:
+                save_path = os.path.join(os.path.dirname(__file__), "temp", "temp.wav")
+                if await self.download_audio(url, save_path):
+                    silk_file = self.convert_to_silk(save_path)
+                    if silk_file:
+                        self.silk_file = silk_file
+                        return
+
 
     @handler(NormalMessageResponded)
     async def normal_message_responded(self, ctx: EventContext, **kwargs):
-        if self.matches and hasattr(self, 'silk_file'):
+        if self.matches and hasattr(self, 'silk_file') and self.url:
             ctx.add_return("reply", [Voice(path=str(self.silk_file))])
             await ctx.event.query.adapter.reply_message(ctx.event.query.message_event, "为你播放音乐：" + self.matches.group(1))
             self.matches = None
-
-
         else:
-            self.logger.error("未找到合适的 SILK 文件路径")
-
+            if self.matches:
+                await ctx.event.query.adapter.reply_message(ctx.event.query.message_event, self.msg)
+                self.logger.error("未找到合适的 SILK 文件路径")
+                self.matches = None
 
     async def download_audio(self, audio_url, save_path):
         try:
@@ -112,16 +117,18 @@ class GetMusic(BasePlugin):
         }
 
         async with httpx.AsyncClient() as client:
-            try:
-                response = await client.get(url, params=params)
-                response.raise_for_status()
-                data = response.json()["data"]
+            response = await client.get(url, params=params)
+            response.raise_for_status()
+            data = response.json()["data"]
+            msg = response.json()["msg"]
+            if data:
                 url = data["url"]
-                return url
-            except httpx.HTTPStatusError as e:
-                self.logger.error(f"获取音乐 URL 失败: {str(e)}")
-                return None
+                return msg, url
+            else:
+                url = None
+                return msg, url
 
+     
     async def get_musicid(self, keyword):
         url = "https://v2.alapi.cn/api/music/search"
         params = {
