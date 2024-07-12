@@ -24,6 +24,12 @@ self.cookie = "YOUR_COOKIE"  # 请将这里的'YOUR_COOKIE'替换为你实际获
 
 只能获取网易云音乐上有的音乐
 
+
+##注意
+
+如果该插件目录内没有”temp“文件夹需自行创建
+
+
 ## 配置GPT
 
 向QChatGpt发送：播放歌曲：XXX(歌名)(空格)XXX(歌手)
