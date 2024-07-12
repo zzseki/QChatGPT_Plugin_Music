@@ -1,6 +1,6 @@
 from pkg.plugin.context import register, handler, BasePlugin, APIHost, EventContext
 from pkg.plugin.events import * # 导入事件类
-from mirai import Voice
+from mirai import Voice,Plain
 import os
 import requests
 from pathlib import Path
@@ -17,68 +17,59 @@ import shutil
 class GetMusic(BasePlugin):
     # 插件加载时触发
     def __init__(self, host: APIHost):
-        self.token = "YOUR_COOKIE"  # 请将这里的'YOUR_TOKEN'替换为你实际获取的token
+        self.token = "YOUR_TOKEN"  # 请将这里的'YOUR_TOKEN'替换为你实际获取的token
         self.cookie = "YOUR_COOKIE"  # 请将这里的'YOUR_COOKIE'替换为你实际获取的cookie
         self.logger = logging.getLogger(__name__)
-        self.matches = None
-        self.msg = None
-        self.url = None
 
-    @handler(PersonMessageReceived)
-    async def person_message_received(self, ctx: EventContext, **kwargs):
-        receive_text = str(ctx.event.message_chain)
+
+    @handler(PersonNormalMessageReceived)
+    async def person_normal_message_received(self, ctx: EventContext):
+        receive_text = ctx.event.text_message
         MUSIC_PATTERN = re.compile(r"播放音乐：(.+)")
         match = MUSIC_PATTERN.search(receive_text)
         if match:
-            self.matches = match
             music_name = match.group(1)
             id = await self.get_musicid(music_name)
             msg,url = await self.get_music(id)
-            self.msg = msg
-            self.url = url
+            self.ap.logger.info(url)
+            #self.msg = msg
+            #self.url = url
             if url:
                 save_path = os.path.join(os.path.dirname(__file__), "temp", "temp.wav")
                 if await self.download_audio(url, save_path):
                     silk_file = self.convert_to_silk(save_path)
-                    if silk_file:
-                        # 可以将结果存储在实例属性中，以便在后续的事件处理器中使用
-                        self.silk_file = silk_file  # 假设是实例属性
-                        # 如果需要在这里做一些回复或记录，可以在这里完成
-                        return  # 这里不需要返回任何东西，事件处理器不应该返回值
+                    ctx.add_return("reply", [Voice(path=str(silk_file))])
+                    self.ap.logger.info("播放音乐：" + music_name)
+                    ctx.prevent_default()
+            else:
+                ctx.add_return("reply", [Plain(str(msg))])
+                ctx.prevent_default()
 
-    @handler(GroupMessageReceived)
-    async def group_message_received(self, ctx: EventContext, **kwargs):
-        receive_text = str(ctx.event.message_chain)
+    # 当收到群消息时触发
+    @handler(GroupNormalMessageReceived)
+    async def group_Normal_message_received(self, ctx: EventContext):
+        receive_text = ctx.event.text_message
         MUSIC_PATTERN = re.compile(r"播放音乐：(.+)")
         match = MUSIC_PATTERN.search(receive_text)
         if match:
-            self.matches = match
             music_name = match.group(1)
             id = await self.get_musicid(music_name)
-            msg,url = await self.get_music(id)
-            self.msg = msg
-            self.url = url
-
+            msg, url = await self.get_music(id)
+            self.ap.logger.info(url)
+            # self.msg = msg
+            # self.url = url
             if url:
                 save_path = os.path.join(os.path.dirname(__file__), "temp", "temp.wav")
                 if await self.download_audio(url, save_path):
                     silk_file = self.convert_to_silk(save_path)
-                    if silk_file:
-                        self.silk_file = silk_file
-                        return
+                    ctx.add_return("reply", [Voice(path=str(silk_file))])
+                    self.ap.logger.info("播放音乐：" + music_name)
+                    ctx.prevent_default()
+            else:
+                ctx.add_return("reply", [Plain(str(msg))])
+                ctx.prevent_default()
 
-
-    @handler(NormalMessageResponded)
-    async def normal_message_responded(self, ctx: EventContext, **kwargs):
-        if self.matches and hasattr(self, 'silk_file') and self.url:
-            ctx.add_return("reply", [Voice(path=str(self.silk_file))])
-            await ctx.event.query.adapter.reply_message(ctx.event.query.message_event, "为你播放音乐：" + self.matches.group(1))
-            self.matches = None
-        else:
-            if self.matches:
-                await ctx.event.query.adapter.reply_message(ctx.event.query.message_event, self.msg)
-                self.logger.error("未找到合适的 SILK 文件路径")
-                self.matches = None
+    
 
     async def download_audio(self, audio_url, save_path):
         try:
