@@ -32,6 +32,6 @@ self.cookie = "YOUR_COOKIE"  # 请将这里的'YOUR_COOKIE'替换为你实际获
 
 ## 配置GPT
 
-向QChatGpt发送：播放歌曲：XXX(歌名)(空格)XXX(歌手)
+向QChatGpt发送：播放音乐：XXX(歌名)(空格)XXX(歌手)
 也可以不限制歌手
 
