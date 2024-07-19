@@ -11,6 +11,8 @@
 
 前往https://www.alapi.cn/  进行注册（截至上传时是免费的）
 
+需要下载安装ffmpeg
+
 在控制面板左侧——接口管理——更新Token密钥，点击Copy复制Token
 
 在本插件文件夹下main.py文件中找到这行，并替换成你获取到的token（不要弄丢引号）
