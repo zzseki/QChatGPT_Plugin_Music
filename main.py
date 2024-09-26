@@ -10,6 +10,7 @@ import re
 import time
 from graiax import silkcoder
 import shutil
+from pydub import AudioSegment
 
 
 # 注册插件
@@ -17,8 +18,8 @@ import shutil
 class GetMusic(BasePlugin):
     # 插件加载时触发
     def __init__(self, host: APIHost):
-        self.token = "YOUR_TOKEN"  # 请将这里的'YOUR_TOKEN'替换为你实际获取的token
-        self.cookie = "YOUR_COOKIE"  # 请将这里的'YOUR_COOKIE'替换为你实际获取的cookie
+        self.token = ""  # 请将这里的'YOUR_TOKEN'替换为你实际获取的token
+        self.cookie = ""  # 请将这里的'YOUR_COOKIE'替换为你实际获取的cookie
         self.logger = logging.getLogger(__name__)
 
 
@@ -35,7 +36,18 @@ class GetMusic(BasePlugin):
             #self.msg = msg
             #self.url = url
             if url:
-                save_path = os.path.join(os.path.dirname(__file__), "temp", "temp.wav")
+                mp3_path = os.path.join(os.path.dirname(__file__), "temp", "temp.mp3")
+                wav_path = os.path.join(os.path.dirname(__file__), "temp", "temp.wav")
+                flac_path = os.path.join(os.path.dirname(__file__), "temp", "temp.flac")
+                if re.search("flac", url):
+                    file_type = "flac"
+                    save_path = flac_path
+                elif re.search("mp3", audio_url):
+                    file_type = "mp3"
+                    save_path = mp3_path
+                else:
+                    file_type = "wav"
+                    save_path = wav_path
                 if await self.download_audio(url, save_path):
                     silk_file = self.convert_to_silk(save_path)
                     ctx.add_return("reply", [Voice(path=str(silk_file))])
@@ -59,7 +71,18 @@ class GetMusic(BasePlugin):
             # self.msg = msg
             # self.url = url
             if url:
-                save_path = os.path.join(os.path.dirname(__file__), "temp", "temp.wav")
+                mp3_path = os.path.join(os.path.dirname(__file__), "temp", "temp.mp3")
+                wav_path = os.path.join(os.path.dirname(__file__), "temp", "temp.wav")
+                flac_path = os.path.join(os.path.dirname(__file__), "temp", "temp.flac")
+                if re.search("flac", url):
+                    file_type = "flac"
+                    save_path = flac_path
+                elif re.search("mp3", audio_url):
+                    file_type = "mp3"
+                    save_path = mp3_path
+                else:
+                    file_type = "wav"
+                    save_path = wav_path
                 if await self.download_audio(url, save_path):
                     silk_file = self.convert_to_silk(save_path)
                     ctx.add_return("reply", [Voice(path=str(silk_file))])
@@ -77,25 +100,42 @@ class GetMusic(BasePlugin):
             if response.status_code == 200:
                 with open(save_path, "wb") as file:
                     file.write(response.content)
-                self.logger.info(f"音频文件已成功保存为 '{save_path}'")
+                self.ap.logger.info(f"音频文件已成功保存为 '{save_path}'")
                 return True
             else:
-                self.logger.error(f"下载音频文件失败，状态码: {response.status_code}")
+                self.ap.logger.error(f"下载音频文件失败，状态码: {response.status_code}")
                 return False
         except Exception as e:
-            self.logger.error(f"下载音频文件发生异常: {str(e)}")
+            self.ap.logger.error(f"下载音频文件发生异常: {str(e)}")
             return False
 
-    def convert_to_silk(self, wav_path: str) -> str:
+    def convert_to_silk(self, save_path: str) -> str:
         temp_folder = os.path.join(os.path.dirname(__file__), "temp")
-        silk_path = os.path.join(temp_folder, Path(wav_path).stem + ".silk")
+        silk_path = os.path.join(temp_folder, Path(save_path).stem + ".silk")
+        wav_path = save_path
+
+        if save_path.endswith(".mp3"):
+            self.ap.logger.info(f"正在将 MP3 文件 {save_path} 转换为 WAV")
+            wav_path = os.path.join(temp_folder, Path(save_path).stem + ".wav")
+            # 将 mp3 转换为 wav
+            audio = AudioSegment.from_mp3(save_path)
+            audio.export(wav_path, format="wav")
+            self.ap.logger.info(f"MP3 文件已成功转换为 WAV 文件 {wav_path}")
+
+        elif save_path.endswith(".flac"):
+            self.ap.logger.info(f"正在将 flac 文件 {save_path} 转换为 WAV")
+            wav_path = os.path.join(temp_folder, Path(save_path).stem + ".wav")
+            # 将 flac 转换为 wav
+            audio = AudioSegment.from_file(save_path, format="flac")
+            audio.export(wav_path, format="wav")
+            self.ap.logger.info(f"flac 文件已成功转换为 WAV 文件 {wav_path}")
 
         try:
             silkcoder.encode(wav_path, silk_path)
-            self.logger.info(f"已将 WAV 文件 {wav_path} 转换为 SILK 文件 {silk_path}")
+            self.ap.logger.info(f"已将 WAV 文件 {wav_path} 转换为 SILK 文件 {silk_path}")
             return silk_path
         except Exception as e:
-            self.logger.error(f"SILK 文件转换失败: {str(e)}")
+            self.ap.logger.error(f"SILK 文件转换失败: {str(e)}")
             return None
 
     async def get_music(self, keyword):
