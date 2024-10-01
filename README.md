@@ -12,6 +12,11 @@
 前往https://www.alapi.cn/  进行注册（截至上传时是免费的）
 
 需要下载安装ffmpeg
+Linux可执行
+```
+sudo apt install ffmpeg
+```
+来安装ffmpeg
 
 在控制面板左侧——接口管理——更新Token密钥，点击Copy复制Token
 
