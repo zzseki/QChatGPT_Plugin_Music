@@ -42,7 +42,7 @@ class GetMusic(BasePlugin):
                 if re.search("flac", url):
                     file_type = "flac"
                     save_path = flac_path
-                elif re.search("mp3", audio_url):
+                elif re.search("mp3", url):
                     file_type = "mp3"
                     save_path = mp3_path
                 else:
@@ -77,7 +77,7 @@ class GetMusic(BasePlugin):
                 if re.search("flac", url):
                     file_type = "flac"
                     save_path = flac_path
-                elif re.search("mp3", audio_url):
+                elif re.search("mp3", url):
                     file_type = "mp3"
                     save_path = mp3_path
                 else:
