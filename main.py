@@ -139,6 +139,7 @@ class GetMusic(BasePlugin):
             return None
 
     async def get_music(self, keyword):
+        time.sleep(1)
         url = "https://v2.alapi.cn/api/music/url"
         params = {
             "id": keyword,
